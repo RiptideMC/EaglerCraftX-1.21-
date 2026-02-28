@@ -1,0 +1,38 @@
+name: Build Eaglercraft 1.8.8 WASM-GC
+on: [workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Compile Eaglercraft
+        run: |
+          # 1. Find and enter the main workspace folder
+          BUILD_DIR=$(find . -name "CompileEPK.sh" -printf '%h' -quit)
+          cd "$BUILD_DIR"
+          chmod +x *.sh
+          
+          # 2. Pack the Assets (Textures)
+          ./CompileEPK.sh
+          
+          # 3. Convert Java to WASM (The longest step)
+          ./CompileJS.sh
+          
+          # 4. Bundle into the final client
+          cd target_teavm_wasm_gc
+          chmod +x *.sh
+          ./MakeWASMClientBundle.sh
+
+      - name: Upload Result
+        uses: actions/upload-artifact@v4
+        with:
+          name: Eaglercraft-WASM-Client
+          path: "**/target_teavm_wasm_gc/javascript_dist/"
